@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import sys
+import time
+from pathlib import Path
+
+VERSION = "MINEMOD AGENT VERSION 1.0.0 BETA RELEASE"
+DEFAULT_OUTPUT_DIR = Path("generated")
+STARTUP_ACTIONS = (
+    ("Installing Python3", 0.4),
+    ("Installing required packages", 0.4),
+)
+
+
+def clear_screen() -> None:
+    command = "cls" if os.name == "nt" else "clear"
+    os.system(command)
+
+
+def start_action(message: str) -> None:
+    print(f"ACTION: {message}")
+
+
+def show_startup_actions() -> None:
+    for message, delay in STARTUP_ACTIONS:
+        start_action(message)
+        time.sleep(delay)
+    clear_screen()
+
+
+def show_version_and_usage() -> None:
+    print(f"Version: {VERSION}")
+    print("Terminal")
+    print("run: minemod --create <MOD NAME> <MOD BEHAVIOR> <IMAGE (Optional)>")
+
+
+def animate_loading(label: str, steps: int = 3, delay: float = 0.35) -> None:
+    for step in range(steps):
+        dots = "." * (step + 1)
+        sys.stdout.write(f"\r{label}{dots}")
+        sys.stdout.flush()
+        time.sleep(delay)
+    sys.stdout.write(f"\r{label}. Done\n")
+    sys.stdout.flush()
+
+
+def write_mod_file(output_dir: Path, name: str, behavior: str, image: str | None) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{name.strip().replace(' ', '_')}.txt"
+    mod_path = output_dir / filename
+    image_entry = image if image else "None"
+    mod_path.write_text(
+        "\n".join(
+            [
+                f"Mod Name: {name}",
+                f"Behavior: {behavior}",
+                f"Image: {image_entry}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return mod_path
+
+
+def copy_image(image_path: str, output_dir: Path) -> Path:
+    source = Path(image_path)
+    if not source.exists():
+        raise FileNotFoundError(f"Image file not found: {image_path}")
+    destination = output_dir / source.name
+    shutil.copy2(source, destination)
+    return destination
+
+
+def run_create(name: str, behavior: str, image: str | None) -> None:
+    print(f"Version: {VERSION}")
+    clear_screen()
+    animate_loading("Loading (File)")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        print("Running OpenAI API Key...")
+    else:
+        print("Running OpenAI API Key... (no key detected)")
+    output_dir = DEFAULT_OUTPUT_DIR
+    copied_image = None
+    if image:
+        copied_image = copy_image(image, output_dir)
+    mod_path = write_mod_file(output_dir, name, behavior, str(copied_image) if copied_image else None)
+    print("Done! The file generated with success!")
+    download_link = mod_path.resolve().as_uri()
+    print(f"Redirecting to the download link: {download_link}")
+
+
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="MineMod AI Mod Maker")
+    parser.add_argument(
+        "--create",
+        nargs="+",
+        metavar=("MOD_NAME", "MOD_BEHAVIOR", "IMAGE"),
+        help="Create a mod file with optional image.",
+    )
+    return parser.parse_args(argv)
+
+
+def main() -> None:
+    args = parse_args(sys.argv[1:])
+    if not args.create:
+        show_startup_actions()
+        show_version_and_usage()
+        return
+
+    if len(args.create) < 2:
+        raise SystemExit("--create requires at least <MOD NAME> and <MOD BEHAVIOR> arguments")
+
+    name = args.create[0]
+    behavior = args.create[1]
+    image = args.create[2] if len(args.create) > 2 else None
+    run_create(name, behavior, image)
+
+
+if __name__ == "__main__":
+    main()
