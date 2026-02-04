@@ -13,5 +13,5 @@ MineMod (AI Mod Maker) CLI that simulates mod creation with optional image uploa
 ```
 
 The generated files are placed in the `generated/` directory, and any provided image
-is copied there as a real file. Startup actions are configured in the `minemod`
+is copied there as a real file; startup actions are configured in the `minemod`
 script via the `STARTUP_ACTIONS` list.
